@@ -20,9 +20,9 @@ model User {
   password     String
   role         Role      @default(USER)
   refreshToken String?
-  order        Order[]
-  cart         Cart[]
-  payment      Payment[]
+  orders        Order[]
+  carts         Cart[]
+  payments      Payment[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -57,9 +57,9 @@ model OrderItem {
   productId String
   quantity  Int
   price     Decimal  @db.Decimal(10, 2)
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -81,21 +81,19 @@ model CartItem {
   @@unique([cartId, productId])
   @@index([cartId])
   @@index([productId])
-  @@map("carts_items")
+  @@map("cart_items")
 }
 
 model Order {
   id              String      @id @default(uuid())
   userId          String
-  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [userId], references: [id])
   totalAmount     Decimal     @db.Decimal(10, 2)
   orderNumber     String      @unique
   status          OrderStatus @default(PENDING)
-  cartId          String
-  cart            Cart        @relation(fields: [cartId], references: [id], onDelete: Cascade)
   shippingAddress String?
   orderItems      OrderItem[]
-  payments        Payment?
+  payments        Payment[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
@@ -109,7 +107,6 @@ model Cart {
   id        String     @id @default(uuid())
   userId    String
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders    Order[]
   checkout  Boolean    @default(false)
   cartItems CartItem[]
   createdAt DateTime   @default(now())
@@ -138,14 +135,14 @@ model Category {
 model Payment {
   id            String        @id @default(uuid())
   userId        String
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id])
   amount        Decimal       @db.Decimal(10, 2)
   status        PaymentStatus @default(PENDING)
   currency      String        @default("INR")
   paymentMethod String
   transactionId String?
-  orderId       String        @unique
-  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId       String       
+  order         Order         @relation(fields: [orderId], references: [id])
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
