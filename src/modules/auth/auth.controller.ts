@@ -2,9 +2,9 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@n
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { AuthResponseDto } from './dto/auth-response';
-import { RefreshTokenGuard } from './guards/refresh-token.guard';
-import { GetUser } from './common/decorator/get-user.decorator';
-import { JwtAuthGuard } from './guards/jwt-auth-guards';
+import { RefreshTokenGuard } from '../../common/guards/refresh-token.guard';
+import { GetUser } from '../../common/decorator/get-user.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth-guards';
 import { LoginDto } from './dto/login.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 @Controller('auth')
