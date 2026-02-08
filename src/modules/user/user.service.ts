@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
+
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from "../../prisma/prisma.service"
 import { UserResponseDto } from './dto/user-response.dto';
@@ -9,9 +9,6 @@ import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) { }
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
 
   async findAll(): Promise<UserResponseDto[]> {
     const users = await this.prisma.user.findMany({

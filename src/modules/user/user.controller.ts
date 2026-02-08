@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, HttpCode, HttpStatus } from '@nestjs/common';
 import { UserService } from './user.service';
-import { CreateUserDto } from './dto/create-user.dto';
+
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiResponseProperty, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth-guards';
@@ -21,8 +21,8 @@ export class UserController {
   @Get("me")
   @ApiOperation({ summary: 'Get current user' })
 
-  getProfile(@Req() req: RequestWithUser) {
-    return this.userService.findOne(req.user.id);
+  async getProfile(@Req() req: RequestWithUser) {
+    return await this.userService.findOne(req.user.id);
   }
 
   //admin purpose only
@@ -42,8 +42,8 @@ export class UserController {
   @ApiResponse({ status: 401, description: 'Unauthorized', })
   @ApiResponse({ status: 404, description: 'User not found', })
   @Patch('me')
-  update(@Param('id') userId: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(userId, updateUserDto);
+  async update(@Param('id') userId: string, @Body() updateUserDto: UpdateUserDto) {
+    return await this.userService.update(userId, updateUserDto);
   }
 
   //change password
@@ -52,8 +52,8 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'Password changed successfully', type: UserResponseDto, })
   @ApiResponse({ status: 401, description: 'Unauthorized', })
   @ApiResponse({ status: 404, description: 'User not found', })
-  changePassword(@Param('id') userId: string, @Body() updateUserPasswordDto: UpdateUserPasswordDto) {
-    return this.userService.updatePassword(userId, updateUserPasswordDto);
+  async changePassword(@Param('id') userId: string, @Body() updateUserPasswordDto: UpdateUserPasswordDto) {
+    return await this.userService.updatePassword(userId, updateUserPasswordDto);
   }
 
   //delete currect user
@@ -63,8 +63,8 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'User deleted successfully', type: UserResponseDto, })
   @ApiResponse({ status: 401, description: 'Unauthorized', })
   @ApiResponse({ status: 404, description: 'User not found', })
-  deleteAccount(@Param('id') userId: string): Promise<{ message: string }> {
-    return this.userService.remove(userId);
+  async deleteAccount(@Param('id') userId: string): Promise<{ message: string }> {
+    return await this.userService.remove(userId);
   }
 
   //delete user by id (admin only)
@@ -75,7 +75,7 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'User deleted successfully', type: UserResponseDto, })
   @ApiResponse({ status: 401, description: 'Unauthorized', })
   @ApiResponse({ status: 404, description: 'User not found', })
-  deleteUser(@Param('id') userId: string): Promise<{ message: string }> {
-    return this.userService.remove(userId);
+  async deleteUser(@Param('id') userId: string): Promise<{ message: string }> {
+    return await this.userService.remove(userId);
   }
 }
