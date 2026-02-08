@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, HttpCode, HttpStatus } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -9,6 +9,7 @@ import type { RequestWithUser } from 'src/common/interfaces/request-with-user.in
 import { Roles } from 'src/common/decorator/role.decorator';
 import { Role } from '@prisma/client';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
 
 @ApiTags('User')
 @ApiBearerAuth('JWT-auth')
@@ -31,6 +32,7 @@ export class UserController {
   @ApiResponse({ status: 200, description: 'List of all users', type: [UserResponseDto], })
   @ApiResponse({ status: 401, description: 'Unauthorized', })
   @ApiResponse({ status: 403, description: 'Forbidden', })
+
   findAll(): Promise<UserResponseDto[]> {
     return this.userService.findAll();
   }
@@ -44,4 +46,36 @@ export class UserController {
     return this.userService.update(userId, updateUserDto);
   }
 
+  //change password
+  @Patch('change-password')
+  @ApiOperation({ summary: 'Change password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully', type: UserResponseDto, })
+  @ApiResponse({ status: 401, description: 'Unauthorized', })
+  @ApiResponse({ status: 404, description: 'User not found', })
+  changePassword(@Param('id') userId: string, @Body() updateUserPasswordDto: UpdateUserPasswordDto) {
+    return this.userService.updatePassword(userId, updateUserPasswordDto);
+  }
+
+  //delete currect user
+  @Delete('me')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete user' })
+  @ApiResponse({ status: 200, description: 'User deleted successfully', type: UserResponseDto, })
+  @ApiResponse({ status: 401, description: 'Unauthorized', })
+  @ApiResponse({ status: 404, description: 'User not found', })
+  deleteAccount(@Param('id') userId: string): Promise<{ message: string }> {
+    return this.userService.remove(userId);
+  }
+
+  //delete user by id (admin only)
+  @Delete(':id')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete user' })
+  @ApiResponse({ status: 200, description: 'User deleted successfully', type: UserResponseDto, })
+  @ApiResponse({ status: 401, description: 'Unauthorized', })
+  @ApiResponse({ status: 404, description: 'User not found', })
+  deleteUser(@Param('id') userId: string): Promise<{ message: string }> {
+    return this.userService.remove(userId);
+  }
 }

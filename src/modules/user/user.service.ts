@@ -3,6 +3,8 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from "../../prisma/prisma.service"
 import { UserResponseDto } from './dto/user-response.dto';
+import { UpdateUserPasswordDto } from './dto/update-user-password.dto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -99,7 +101,80 @@ export class UserService {
     return updatedUser;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async updatePassword(userId: string, updateUserPasswordDto: UpdateUserPasswordDto) {
+    const { currentPassword, newPassword, confirmPassword } = updateUserPasswordDto;
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    })
+
+    if (!user) {
+      throw new NotFoundException("User not found")
+    }
+    if (newPassword !== confirmPassword) {
+      throw new BadRequestException("Passwords do not match");
+    }
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException("Invalid current password");
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: { password: hashedPassword },
+      select: {
+        id: true,
+        email: true,
+        password: false,
+        firstName: true,
+        lastName: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true
+
+      }
+
+    })
+
+    return { message: "Password changed successfully" };
+  }
+
+  async remove(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    })
+
+    if (!user) {
+      throw new NotFoundException("User not found")
+    }
+    const deletedUser = await this.prisma.user.delete({
+      where: {
+        id: userId,
+      },
+    })
+    return { message: "User deleted successfully" };
+  }
+
+  async deleteByAdmin(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    })
+
+    if (!user) {
+      throw new NotFoundException("User not found")
+    }
+    const deletedUser = await this.prisma.user.delete({
+      where: {
+        id: userId,
+      },
+    })
+    return { message: "User deleted successfully" };
   }
 }
