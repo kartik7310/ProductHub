@@ -20,9 +20,9 @@ model User {
   password     String
   role         Role      @default(USER)
   refreshToken String?
-  orders        Order[]
-  carts         Cart[]
-  payments      Payment[]
+  orders       Order[]
+  carts        Cart[]
+  payments     Payment[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
