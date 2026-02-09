@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CategoryResponseDto } from './dto/category-response.dto';
-import { Category } from '@prisma/client';
+import { Category, Prisma } from '@prisma/client';
+import { QueryCategoryDto } from './dto/category-filter.dto';
 
 @Injectable()
 export class CategoryService {
@@ -26,25 +27,154 @@ export class CategoryService {
     return this.categoryToResponse(category, 0);
   }
 
-  async findAll() {
+  async findAll(query: QueryCategoryDto): Promise<{
+    data: CategoryResponseDto[];
+    meta: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
+  }> {
+    const { isActive, search, page = 1, limit = 10 } = query;
+    const where: Prisma.CategoryWhereInput = {};
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    const totalCount = await this.prisma.category.count({ where });
     const categories = await this.prisma.category.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: {
+        createdAt: 'desc',
+      },
       include: {
-        products: true,
+        _count: {
+          select: {
+            products: true
+          }
+        }
+      }
+    });
+    const totalPages = Math.ceil(totalCount / limit);
+    return {
+      data: categories.map(category => this.categoryToResponse(category, category._count.products)),
+      meta: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  }
+
+  async findOne(categoryId: string) {
+    const category = await this.prisma.category.findUnique({
+      where: {
+        id: categoryId,
+      },
+      include: {
+        _count: {
+          select: {
+            products: true
+          }
+        }
+      }
+    });
+    if (!category) {
+      throw new Error('Category not found');
+    }
+    return this.categoryToResponse(category, category._count.products);
+  }
+
+  async findBySlug(slug: string) {
+    const category = await this.prisma.category.findUnique({
+      where: {
+        slug: slug,
+      },
+      include: {
+        _count: {
+          select: {
+            products: true
+          }
+        }
+      }
+    });
+    if (!category) {
+      throw new Error('Category not found');
+    }
+    return this.categoryToResponse(category, category._count.products);
+  }
+
+
+  async update(categoryId: string, updateCategoryDto: UpdateCategoryDto) {
+    const category = await this.prisma.category.findUnique({
+      where: {
+        id: categoryId,
       },
     });
-    return categories;
+    if (!category) {
+      throw new Error('Category not found');
+    }
+    if (category.slug !== updateCategoryDto.slug) {
+      const existingCategory = await this.prisma.category.findUnique({
+        where: {
+          slug: updateCategoryDto.slug,
+        },
+      });
+      if (existingCategory) {
+        throw new ConflictException('Category slug already exists');
+      }
+    }
+    const updatedCategory = await this.prisma.category.update({
+      where: {
+        id: categoryId,
+      },
+      data: updateCategoryDto,
+      include: {
+        _count: {
+          select: {
+            products: true
+          }
+        }
+      }
+    });
+    return this.categoryToResponse(updatedCategory, updatedCategory._count.products);
   }
 
-  async findOne(id: number) {
-    return `This action returns a #${id} category`;
-  }
+  async remove(categoryId: string) {
+    const category = await this.prisma.category.findUnique({
+      where: {
+        id: categoryId,
+      },
+      select: {
+        _count: {
+          select: {
+            products: true
+          }
+        }
+      }
+    });
+    if (!category) {
+      throw new Error('Category not found');
+    }
+    if (category._count.products > 0) {
+      throw new Error(`Category has ${category._count.products} products`);
+    }
+    await this.prisma.category.delete({
+      where: {
+        id: categoryId,
+      },
+    });
 
-  update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    return `This action updates a #${id} category`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} category`;
+    return { message: 'Category deleted successfully' };
   }
 
   private categoryToResponse(category: Category, productCount: number): CategoryResponseDto {
