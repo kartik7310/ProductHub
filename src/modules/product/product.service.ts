@@ -1,16 +1,19 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Patch, UseGuards } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductResponseDto } from './dto/response-product.dto';
-import { PrismaClient } from '@prisma/client/extension';
 import { Category, Prisma, Product } from '@prisma/client';
 import { QueryProductDto } from './dto/query-product.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+
 
 @Injectable()
 export class ProductService {
-  constructor(private prisma: PrismaClient) { }
+  constructor(private prisma: PrismaService) { }
+
+
   async create(createProductDto: CreateProductDto): Promise<ProductResponseDto> {
-    const existingSku = await this.prisma.product.findOne({ where: { sku: createProductDto.sku } });
+    const existingSku = await this.prisma.product.findUnique({ where: { sku: createProductDto.sku } });
     if (existingSku) {
       throw new ConflictException('Sku already exists');
     }
@@ -20,7 +23,7 @@ export class ProductService {
           ...createProductDto,
           price: new Prisma.Decimal(createProductDto.price),
         },
-        select: {
+        include: {
           category: true,
         }
       }
@@ -71,16 +74,110 @@ export class ProductService {
 
 
 
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
+  async findOne(productId: string) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        category: true,
+      },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return this.formatProduct(product);
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async update(productId: string, updateProductDto: UpdateProductDto): Promise<ProductResponseDto> {
+    const existingProduct = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!existingProduct) {
+      throw new NotFoundException('Product not found');
+    }
+    if (updateProductDto.sku && updateProductDto.sku !== existingProduct.sku) {
+      const existingSku = await this.prisma.product.findUnique({
+        where: { sku: updateProductDto.sku },
+      });
+      if (existingSku) {
+        throw new ConflictException('Sku already exists');
+      }
+    }
+    const updateData: any = { ...updateProductDto }
+    if (updateProductDto.price !== undefined) {
+      updateData.price = new Prisma.Decimal(updateProductDto.price)
+    }
+    const product = await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        ...updateData,
+      },
+      include: {
+        category: true,
+      },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return this.formatProduct(product);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+  //update product stock
+  async updateStock(productId: string, quantity: number): Promise<ProductResponseDto> {
+    const existingProduct = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!existingProduct) {
+      throw new NotFoundException('Product not found');
+    }
+    const newStock = existingProduct.stock + quantity;
+    if (newStock < 0) {
+      throw new BadRequestException('Insufficient stock');
+    }
+    const product = await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        stock: newStock,
+      },
+      include: {
+        category: true,
+      },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return this.formatProduct(product);
+  }
+
+
+  async remove(productId: string): Promise<{ message: string }> {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        name: true,
+        _count: { select: { orderItems: true } }
+      },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    if (product._count.orderItems > 0) {
+      throw new BadRequestException(
+        `Cannot delete product ${product.name} as it is associated with an order`
+      );
+    }
+
+    try {
+      await this.prisma.product.delete({
+        where: { id: productId },
+      });
+
+      return { message: "Product deleted successfully" };
+    } catch (error) {
+      throw new BadRequestException('Product cannot be deleted due to database constraints.');
+    }
   }
 
   private formatProduct(

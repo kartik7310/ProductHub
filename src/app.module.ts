@@ -6,11 +6,12 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './modules/user/user.module';
 import { CategoryModule } from './modules/category/category.module';
+import { ProductModule } from './modules/product/product.module';
 
 
 @Module({
   imports: [
-    PrismaModule, AuthModule, UserModule, CategoryModule,
+    PrismaModule, AuthModule, UserModule, CategoryModule, ProductModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env'

@@ -12,7 +12,7 @@ import { QueryProductDto } from './dto/query-product.dto';
 
 @Controller('product')
 export class ProductController {
-  constructor(private readonly productService: ProductService) { }
+  constructor(private productService: ProductService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -75,18 +75,115 @@ export class ProductController {
     return this.productService.findAll(query);
   }
 
+  // Get product by id
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.productService.findOne(+id);
+  @ApiOperation({
+    summary: 'Get product by id',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Product found successfully',
+    type: ProductResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Product not found',
+  })
+  findOne(@Param('id') productId: string): Promise<ProductResponseDto> {
+    return this.productService.findOne(productId);
   }
 
+  // Update product
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
-    return this.productService.update(+id, updateProductDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Update product (Admin Only)',
+  })
+  @ApiBody({
+    type: UpdateProductDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Product updated successfully',
+    type: ProductResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Product not found',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required',
+  })
+  update(@Param('id') productId: string, @Body() updateProductDto: UpdateProductDto): Promise<ProductResponseDto> {
+    return this.productService.update(productId, updateProductDto);
   }
 
+  // Update product stock
+  @Patch(':id/stock')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Update product stock (Admin Only)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        quantity: {
+          type: 'number',
+          description:
+            'Stock adjustment ( positive to add, negative to subtract) ',
+          example: 10,
+        },
+      },
+      required: ['quantity'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock updated successfully',
+    type: ProductResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Insufficient stock',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Product not found',
+  })
+
+  async updateStock(@Param('id') productId: string, @Body('quantity') quantity: number): Promise<ProductResponseDto> {
+    return this.productService.updateStock(productId, quantity);
+  }
+
+
+  // Delete product
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.productService.remove(+id);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Delete product (Admin Only)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Product deleted successfully',
+    type: ProductResponseDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Product not found',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Admin role required',
+  })
+  remove(@Param('id') productId: string): Promise<{ message: string }> {
+    return this.productService.remove(productId);
   }
 }
