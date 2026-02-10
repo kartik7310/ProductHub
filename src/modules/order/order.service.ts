@@ -1,0 +1,109 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { UpdateOrderDto } from './dto/update-order.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { OrderApiResponseDto, OrderResponseDto } from './dto/response-order.dto';
+import { OrderStatus } from '@prisma/client';
+
+@Injectable()
+export class OrderService {
+  constructor(private prisma: PrismaService) { }
+  async create(userId: string, createOrderDto: CreateOrderDto): Promise<OrderApiResponseDto<OrderResponseDto>> {
+    const { shippingAddress, items } = createOrderDto;
+    if (!items || items.length === 0) {
+      throw new BadRequestException('Order must contain at least one item');
+    }
+    const productIds = items.map((item) => item.productId);
+    const order = await this.prisma.$transaction(async (tx) => {
+      const products = await tx.product.findMany({
+        where: {
+          id: {
+            in: productIds,
+          },
+        },
+      });
+
+      const productMap = new Map(products.map((product) => [product.id, product]));
+      let totalAmout: number = 0;
+      for (const item of items) {
+        const product = productMap.get(item.productId);
+        if (!product) {
+          throw new NotFoundException(`Product ${item.productId} not found`);
+        }
+        const updateded = await tx.product.update({
+          where: {
+            id: item.productId,
+          },
+          data: {
+            stock: { decrement: item.quantity },
+
+          },
+        });
+
+        if (updateded.count === 0) {
+          throw new BadRequestException(`Product ${item.productId} is out of stock`);
+        }
+        totalAmout += product.price * item.quantity;
+        const latestCart = await tx.cart.findFirst({
+          where: {
+            userId,
+            checkout: false,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+      }
+
+      const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+      const newOrder = await tx.order.create({
+        data: {
+          userId,
+          orderNumber,
+          status: OrderStatus.PENDING,
+          totalAmount: totalAmout,
+          shippingAddress,
+          cartId: latestCart?.id,
+          orderItems: {
+            create: items.map(item => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              price: productMap.get(item.productId)!.price,
+            })),
+          },
+        },
+        include: {
+          orderItems: {
+            include: { product: true },
+          },
+          user: true,
+        },
+      });
+      return {
+        data: newOrder,
+        message: 'Order created successfully',
+      };
+
+    })
+
+
+
+  }
+
+  findAll() {
+    return `This action returns all order`;
+  }
+
+  findOne(id: number) {
+    return `This action returns a #${id} order`;
+  }
+
+  update(id: number, updateOrderDto: UpdateOrderDto) {
+    return `This action updates a #${id} order`;
+  }
+
+  remove(id: number) {
+    return `This action removes a #${id} order`;
+  }
+}

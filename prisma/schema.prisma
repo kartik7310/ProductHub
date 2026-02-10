@@ -93,10 +93,12 @@ model Order {
   status          OrderStatus @default(PENDING)
   shippingAddress String?
   orderItems      OrderItem[]
+  cartId          String?
+  cart            Cart?       @relation(fields: [cartId], references: [id])
   payments        Payment[]
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
-
+  version         Int         @default(1)
   @@index([orderNumber])
   @@index([status])
   @@index([userId])
@@ -109,6 +111,7 @@ model Cart {
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   checkout  Boolean    @default(false)
   cartItems CartItem[]
+  orders    Order[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
