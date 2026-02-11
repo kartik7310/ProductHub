@@ -3,7 +3,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { OrderApiResponseDto, OrderResponseDto } from './dto/response-order.dto';
-import { OrderStatus } from '@prisma/client';
+import { Cart, Order, OrderItem, OrderStatus, Product, User } from '@prisma/client';
 
 @Injectable()
 export class OrderService {
@@ -25,14 +25,16 @@ export class OrderService {
 
       const productMap = new Map(products.map((product) => [product.id, product]));
       let totalAmout: number = 0;
+      let latestCart: Cart | null = null;
       for (const item of items) {
         const product = productMap.get(item.productId);
         if (!product) {
           throw new NotFoundException(`Product ${item.productId} not found`);
         }
-        const updateded = await tx.product.update({
+        const updateded = await tx.product.updateMany({
           where: {
             id: item.productId,
+            stock: { gte: item.quantity },
           },
           data: {
             stock: { decrement: item.quantity },
@@ -43,8 +45,8 @@ export class OrderService {
         if (updateded.count === 0) {
           throw new BadRequestException(`Product ${item.productId} is out of stock`);
         }
-        totalAmout += product.price * item.quantity;
-        const latestCart = await tx.cart.findFirst({
+        totalAmout += Number(product.price) * item.quantity;
+        latestCart = await tx.cart.findFirst({
           where: {
             userId,
             checkout: false,
@@ -75,17 +77,17 @@ export class OrderService {
         },
         include: {
           orderItems: {
-            include: { product: true },
+            include: {
+              product: true
+            },
           },
           user: true,
         },
       });
-      return {
-        data: newOrder,
-        message: 'Order created successfully',
-      };
 
+      return this.wrap(newOrder);
     })
+    return order
 
 
 
@@ -105,5 +107,50 @@ export class OrderService {
 
   remove(id: number) {
     return `This action removes a #${id} order`;
+  }
+
+  private wrap(
+    order: Order & {
+      orderItems: (OrderItem & { product: Product })[];
+      user: User;
+    },
+  ): OrderApiResponseDto<OrderResponseDto> {
+    return {
+      success: true,
+      message: 'Order retreived successfully',
+      data: this.map(order),
+    };
+  }
+
+  private map(
+    order: Order & {
+      orderItems: (OrderItem & { product: Product })[];
+      user: User;
+    },
+  ): OrderResponseDto {
+    return {
+      id: order.id,
+      userId: order.userId,
+      status: order.status,
+      total: Number(order.totalAmount),
+      shippingAddress: order.shippingAddress ?? '',
+      items: order.orderItems.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: Number(item.price),
+        subtotal: Number(item.price) * item.quantity,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      })),
+      ...(order.user && {
+        userEmail: order.user.email,
+        userName:
+          `${order.user.firstName || ''} ${order.user.lastName || ''}`.trim(),
+      }),
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+    };
   }
 }
