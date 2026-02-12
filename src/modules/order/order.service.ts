@@ -217,8 +217,40 @@ export class OrderService {
     return this.wrap(updated);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} order`;
+  async cancle(id: string, userId?: string): Promise<OrderApiResponseDto<OrderResponseDto>> {
+    const where: any = { id }
+    if (userId) {
+      where.userId = userId
+    }
+    const cancleOrder = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: {
+          ...where,
+          status: OrderStatus.PENDING
+        },
+        include: {
+          orderItems: true,
+        },
+      })
+      if (!order) {
+        throw new NotFoundException(`Order ${id} not found`);
+      }
+      for (const items of order.orderItems) {
+        await tx.product.update({
+          where: { id: items.productId },
+          data: { stock: { increment: items.quantity } },
+        });
+      }
+      return tx.order.update({
+        where: { id },
+        data: { status: OrderStatus.CANCELLED },
+        include: {
+          orderItems: { include: { product: true } },
+          user: true
+        },
+      });
+    })
+    return this.wrap(cancleOrder)
   }
 
   private wrap(

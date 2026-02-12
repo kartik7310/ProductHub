@@ -8,6 +8,7 @@ import { Roles } from 'src/common/decorator/role.decorator';
 import { Role } from '@prisma/client';
 import { CategoryResponseDto } from './dto/category-response.dto';
 import { QueryCategoryDto } from './dto/category-filter.dto';
+import { ModerateThrottle } from 'src/common/decorator/custom-thorttlerdecorator';
 
 @ApiTags('Category')
 
@@ -101,11 +102,7 @@ export class CategoryController {
 
   @Get('slug/:slug')
   @ApiOperation({ summary: 'Get a category by slug' })
-  @ApiResponse({
-    status: 200,
-    description: 'Category retrieved successfully.',
-    type: CategoryResponseDto,
-  })
+  @ApiResponse({ status: 200, description: 'Category retrieved successfully.', type: CategoryResponseDto, })
   async findBySlug(@Param('slug') slug: string) {
     return await this.categoryService.findBySlug(slug);
   }
@@ -113,32 +110,22 @@ export class CategoryController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a category' })
-  @ApiResponse({
-    status: 200,
-    description: 'Category updated successfully.',
-    type: CategoryResponseDto,
-  })
+  @ApiResponse({ status: 200, description: 'Category updated successfully.', type: CategoryResponseDto, })
   @UseGuards(JwtAuthGuard)
   @Roles(Role.ADMIN)
   async update(@Param('id') id: string, @Body() updateCategoryDto: UpdateCategoryDto) {
     return await this.categoryService.update(id, updateCategoryDto);
   }
 
-  @Delete(':id')
+  //admin = cancle order
+  @Delete('admin/:id')
+  @Roles(Role.ADMIN)
+  @ModerateThrottle()
   @ApiOperation({ summary: 'Delete a category' })
   @ApiBearerAuth("JWT-auth")
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({
-    status: 200,
-    description: 'Category deleted successfully.',
-    type: CategoryResponseDto,
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Category not found.',
-  })
-  @UseGuards(JwtAuthGuard)
-  @Roles(Role.ADMIN)
+  @ApiResponse({ status: 200, description: 'Category deleted successfully.', type: CategoryResponseDto, })
+  @ApiResponse({ status: 404, description: 'Category not found.', })
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     return await this.categoryService.remove(id);
   }

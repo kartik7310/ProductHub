@@ -3,22 +3,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class OrderApiResponseDto<T> {
-    @ApiProperty({
-        description: 'Indicates if the request was successfull',
-    })
+    @ApiProperty({ description: 'Indicates if the request was successfull' })
     success: boolean;
 
-    @ApiProperty({
-        description: 'Returned data',
-        type: Object,
-    })
+    @ApiProperty({ description: 'Returned data', type: Object, })
     data: T;
 
-    @ApiProperty({
-        description: 'Optional message',
-        nullable: true,
-        required: false,
-    })
+    @ApiProperty({ description: 'Optional message', nullable: true, required: false, })
     message: string;
 }
 
@@ -64,9 +55,7 @@ export class OrderResponseDto {
     @ApiProperty()
     shippingAddress: string;
 
-    @ApiProperty({
-        type: [OrderItemResponseDto],
-    })
+    @ApiProperty({ type: [OrderItemResponseDto], })
     items: OrderItemResponseDto[];
 
     @ApiProperty()
@@ -77,9 +66,7 @@ export class OrderResponseDto {
 }
 
 export class PaginatedOrderResponseDto {
-    @ApiProperty({
-        type: [OrderResponseDto],
-    })
+    @ApiProperty({ type: [OrderResponseDto], })
     data: OrderResponseDto[];
 
     @ApiProperty()

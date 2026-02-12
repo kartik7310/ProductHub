@@ -25,24 +25,10 @@ export class OrderController {
   @Get('admin/all')
   @Roles(Role.ADMIN)
   @RelaxedThrottle()
-  @ApiOperation({
-    summary: '[ADMIN] Get all orders (paginated)',
-  })
-  @ApiQuery({
-    name: 'status',
-    required: false,
-    type: String,
-  })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-  })
+  @ApiOperation({ summary: '[ADMIN] Get all orders (paginated)' })
+  @ApiQuery({ name: 'status', required: false, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({
     description: 'List of orders',
     schema: {
@@ -65,16 +51,11 @@ export class OrderController {
   // User Get own orders
   @Get()
   @RelaxedThrottle()
-  @ApiOperation({
-    summary: 'Get all orders for current user (paginated)',
-  })
+  @ApiOperation({ summary: 'Get all orders for current user (paginated)' })
   @ApiQuery({ name: 'status', required: false, type: String })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiOkResponse({
-    description: 'List of user orders',
-    type: PaginatedOrderResponseDto,
-  })
+  @ApiOkResponse({ description: 'List of user orders', type: PaginatedOrderResponseDto })
   async findAllForUser(@GetUser('id') userId: string, @Query() query: QueryOrderDto) {
     return await this.orderService.findAllForUser(userId, query);
   }
@@ -84,23 +65,11 @@ export class OrderController {
   @Get('admin/:id')
   @Roles(Role.ADMIN)
   @RelaxedThrottle()
-  @ApiOperation({
-    summary: '[ADMIN]: Get order by id',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'Order ID',
-  })
-  @ApiOkResponse({
-    description: 'Order details',
-    type: OrderApiResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'Order not found',
-  })
-  @ApiForbiddenResponse({
-    description: 'Admin access required',
-  })
+  @ApiOperation({ summary: '[ADMIN]: Get order by id' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
+  @ApiOkResponse({ description: 'Order details', type: OrderApiResponseDto })
+  @ApiNotFoundResponse({ description: 'Order not found' })
+  @ApiForbiddenResponse({ description: 'Admin access required' })
   async findOneAdmin(@Param('id') id: string) {
     return await this.orderService.findOne(id);
   }
@@ -108,20 +77,10 @@ export class OrderController {
   //get user order by id
   @Get(':id')
   @RelaxedThrottle()
-  @ApiOperation({
-    summary: 'Get order by id',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'Order ID',
-  })
-  @ApiOkResponse({
-    description: 'Order details',
-    type: OrderApiResponseDto,
-  })
-  @ApiNotFoundResponse({
-    description: 'Order not found',
-  })
+  @ApiOperation({ summary: 'Get order by id' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
+  @ApiOkResponse({ description: 'Order details', type: OrderApiResponseDto })
+  @ApiNotFoundResponse({ description: 'Order not found' })
   async findOne(@Param('id') id: string, @GetUser('id') userId: string) {
     return await this.orderService.findOne(id, userId);
   }
@@ -130,16 +89,22 @@ export class OrderController {
   @Patch('admin/:id')
   @Roles(Role.ADMIN)
   @ModerateThrottle()
-  @ApiOperation({
-    summary: '[ADMIN] Update any order',
-  })
-  @ApiParam({
-    name: 'id',
-    description: 'Order ID',
-  })
-  @ApiBody({
-    type: UpdateOrderDto,
-  })
+  @ApiOperation({ summary: '[ADMIN] Update any order' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
+  @ApiBody({ type: UpdateOrderDto })
+  @ApiOkResponse({ description: 'Order update successfully', type: OrderApiResponseDto })
+  @ApiNotFoundResponse({ description: 'Order not found' })
+  @ApiForbiddenResponse({ description: 'Admin access required' })
+  async updateAdmin(@Param('id') id: string, @Body() dto: UpdateOrderDto) {
+    return await this.orderService.update(id, dto);
+  }
+
+  // user: update order own order
+  @Patch(':id')
+  @RelaxedThrottle()
+  @ApiOperation({ summary: 'Update order' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
+  @ApiBody({ type: UpdateOrderDto })
   @ApiOkResponse({
     description: 'Order update successfully',
     type: OrderApiResponseDto,
@@ -147,14 +112,32 @@ export class OrderController {
   @ApiNotFoundResponse({
     description: 'Order not found',
   })
-  @ApiForbiddenResponse({
-    description: 'Admin access required',
-  })
-  async updateAdmin(@Param('id') id: string, @Body() dto: UpdateOrderDto) {
-    return await this.orderService.update(id, dto);
+  async update(@Param('id') id: string, @Body() dto: UpdateOrderDto, @GetUser('id') userId: string) {
+    return await this.orderService.update(id, dto, userId);
   }
+  //Admin :cancle the order
+  @Delete('admin/:id')
+  @Roles(Role.ADMIN)
+  @ModerateThrottle()
+  @ApiOperation({ summary: '[ADMIN] Cancel order' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
+  @ApiOkResponse({ description: 'Order cancelled successfully' })
+  @ApiNotFoundResponse({ description: 'Order not found' })
+  @ApiForbiddenResponse({ description: 'Admin access required' })
+  async cancelAdmin(@Param('id') id: string) {
+    return await this.orderService.cancle(id);
+  }
+
+  //USER :cancle the order
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.orderService.remove(+id);
+  @ModerateThrottle()
+  @ApiOperation({ summary: 'Cancel order' })
+  @ApiParam({ name: 'id', description: 'Order ID' })
+  @ApiOkResponse({ description: 'Order cancelled successfully' })
+  @ApiNotFoundResponse({ description: 'Order not found' })
+  @ApiForbiddenResponse({ description: 'Admin access required' })
+  async cancel(@Param('id') id: string, @GetUser('id') userId: string) {
+    return await this.orderService.cancle(id, userId);
   }
+
 }
