@@ -35,7 +35,7 @@ The system follows a **Modular Monolith Architecture**, ensuring separation of c
 ### System Component Diagram
 ```mermaid
 graph TD
-    Client[Client App/Frontend] -->|API Requests| Gateway[NestJS API Gateway]
+    Client[Client App/Frontend] -->|API Requests| Gateway[App Module]
     Gateway --> Auth[Auth Module]
     Gateway --> User[User Module]
     Gateway --> Product[Product Module]
@@ -65,54 +65,113 @@ Each module in ProductHub follows the standard NestJS pattern:
 ### Directory Structure
 ```text
 src/
-├── common/                           # Shared utilities & configurations
-│   ├── decorator/                    # Custom decorators (GetUser, Roles, Throttler)
-│   │   ├── custom-thorttlerdecorator.ts
+│
+├── main.ts
+├── app.module.ts
+├── app.controller.ts
+├── app.controller.spec.ts
+├── app.service.ts
+│
+├── common/
+│   ├── decorators/
+│   │   ├── throttle.decorator.ts
 │   │   ├── get-user.decorator.ts
-│   │   └── role.decorator.ts
-│   ├── guards/                       # Security guards (JWT, Refresh, RBAC)
-│   │   ├── jwt-auth-guards.ts
+│   │   └── roles.decorator.ts
+│   │
+│   ├── guards/
+│   │   ├── jwt-auth.guard.ts
 │   │   ├── refresh-token.guard.ts
-│   │   └── user-role-guard.ts
-│   └── interfaces/                    # Shared TypeScript interfaces
+│   │   └── roles.guard.ts
+│   │
+│   └── interfaces/
 │       └── request-with-user.interface.ts
-├── modules/                          # Business Logic Modules
-│   ├── auth/                         # Authentication & Token Management
-│   │   ├── dto/                      # Auth Data Transfer Objects
-│   │   ├── strategy/                 # Passport JWT strategies
-│   │   ├── auth.controller.ts
+│
+├── modules/
+│
+│   ├── auth/
 │   │   ├── auth.module.ts
-│   │   └── auth.service.ts
-│   ├── user/                         # User Profile & Management
+│   │   ├── auth.controller.ts
+│   │   ├── auth.controller.spec.ts
+│   │   ├── auth.service.ts
+│   │   ├── auth.service.spec.ts
+│   │   │
 │   │   ├── dto/
-│   │   ├── user.controller.ts
+│   │   │   ├── login.dto.ts
+│   │   │   ├── signup.dto.ts
+│   │   │   └── auth-response.dto.ts
+│   │   │
+│   │   └── strategies/
+│   │       ├── jwt.strategy.ts
+│   │       └── refresh-token.strategy.ts
+│
+│   ├── user/
 │   │   ├── user.module.ts
-│   │   └── user.service.ts
-│   ├── product/                      # Product Inventory & Management
-│   │   ├── dto/
-│   │   ├── product.controller.ts
-│   │   ├── product.module.ts
-│   │   └── product.service.ts
-│   ├── category/                     # Product Categorization
-│   │   ├── dto/
-│   │   ├── category.controller.ts
+│   │   ├── user.controller.ts
+│   │   ├── user.controller.spec.ts
+│   │   ├── user.service.ts
+│   │   ├── user.service.spec.ts
+│   │   │
+│   │   └── dto/
+│   │       ├── update-user.dto.ts
+│   │       ├── update-user-password.dto.ts
+│   │       └── user-response.dto.ts
+│
+│   ├── category/
 │   │   ├── category.module.ts
-│   │   └── category.service.ts
-│   ├── order/                        # Order Processing Lifecycle
-│   │   ├── dto/
-│   │   ├── order.controller.ts
+│   │   ├── category.controller.ts
+│   │   ├── category.controller.spec.ts
+│   │   ├── category.service.ts
+│   │   ├── category.service.spec.ts
+│   │   │
+│   │   └── dto/
+│   │       ├── create-category.dto.ts
+│   │       ├── update-category.dto.ts
+│   │       ├── category-filter.dto.ts
+│   │       └── category-response.dto.ts
+│
+│   ├── product/
+│   │   ├── product.module.ts
+│   │   ├── product.controller.ts
+│   │   ├── product.controller.spec.ts
+│   │   ├── product.service.ts
+│   │   ├── product.service.spec.ts
+│   │   │
+│   │   └── dto/
+│   │       ├── create-product.dto.ts
+│   │       ├── update-product.dto.ts
+│   │       ├── query-product.dto.ts
+│   │       └── product-response.dto.ts
+│
+│   ├── order/
 │   │   ├── order.module.ts
-│   │   └── order.service.ts
-│   └── payment/                      # Payment Processing (Stripe Integration)
-│       ├── dto/
-│       ├── payment.controller.ts
+│   │   ├── order.controller.ts
+│   │   ├── order.controller.spec.ts
+│   │   ├── order.service.ts
+│   │   ├── order.service.spec.ts
+│   │   │
+│   │   └── dto/
+│   │       ├── create-order.dto.ts
+│   │       ├── update-order.dto.ts
+│   │       ├── query-order.dto.ts
+│   │       └── order-response.dto.ts
+│
+│   └── payment/
 │       ├── payment.module.ts
-│       └── payment.service.ts
-├── prisma/                           # Database ORM Integration
-│   ├── prisma.module.ts
-│   └── prisma.service.ts
-├── app.module.ts                     # Root application module
-└── main.ts                           # Entry point (Bootstrap & Swagger Setup)
+│       ├── payment.controller.ts
+│       ├── payment.controller.spec.ts
+│       ├── payment.service.ts
+│       ├── payment.service.spec.ts
+│       │
+│       └── dto/
+│           ├── create-payment.dto.ts
+│           ├── confirm-payment.dto.ts
+│           ├── update-payment.dto.ts
+│           └── payment-response.dto.ts
+│
+└── prisma/
+    ├── prisma.module.ts
+    ├── prisma.service.ts
+    └── prisma.service.spec.ts
 ```
 
 ---
