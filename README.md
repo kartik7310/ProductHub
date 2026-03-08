@@ -1,4 +1,4 @@
-# ProductHub - E-commerce Backend API
+# ProductHub - E-commerce Backend 
 
 ProductHub is a professional, scalable, and high-performance e-commerce backend built with **NestJS**, **Prisma**, and **PostgreSQL**. It provides a robust set of features including authentication, role-based access control, product management, order processing, and payment integration.
 
